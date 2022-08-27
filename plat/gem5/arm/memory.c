@@ -2,7 +2,7 @@
 /*
  * Authors: Costin Lupu <costin.lupu@cs.pub.ro>
  *
- * Copyright (c) 2018, NEC Europe Ltd., NEC Corporation. All rights reserved.
+ * Copyright (c) 2019, University Politehnica of Bucharest. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,38 +28,12 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * THIS HEADER MAY NOT BE EXTRACTED OR MODIFIED IN ANY WAY.
  */
-#ifndef __UKPLAT_IRQ_H__
-#define __UKPLAT_IRQ_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <uk/essentials.h>
 
-struct uk_alloc;
-
-/**
- * Initializes platform IRQ subsystem
- * @param a The allocator to be used for internal memory allocations
- * @return initialization status
- */
-int ukplat_irq_init(struct uk_alloc *a);
-
-typedef int (*irq_handler_func_t)(void *);
-
-/**
- * Registers an interrupt handler
- * @param irq Interrupt number
- * @param func Interrupt funciton
- * @param arg Extra argument to be handover to interrupt function
- * @return 0 on success, a negative errno value on errors
- */
-int ukplat_irq_register(unsigned long irq, irq_handler_func_t func, void *arg);
-
-#ifdef __cplusplus
+void ukplat_stack_set_current_thread(void *thread_addr __unused)
+{
 }
-#endif
-
-void _ukplat_irq_handle(unsigned long irq);
-
-#endif /* __UKPLAT_IRQ_H__ */

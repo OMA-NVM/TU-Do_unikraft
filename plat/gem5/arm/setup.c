@@ -18,20 +18,14 @@
  * NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
+#include <arm/cpu.h>
 #include <config.h>
 #include <libfdt.h>
-#include <uk/plat/common/sections.h>
-#include <uart/pl011.h>
-#ifdef CONFIG_RTC_PL031
-#include <rtc/pl031.h>
-#endif /* CONFIG_RTC_PL031 */
-#include <kvm/config.h>
+#include <sections.h>
+#include <gem5/console.h>
 #include <uk/assert.h>
-#include <kvm-arm/mm.h>
-#include <kvm/intctrl.h>
-#include <arm/cpu.h>
-#include <arm/arm64/cpu.h>
-#include <arm/smccc.h>
+#include <gem5-arm/mm.h>
+#include <gem5/intctrl.h>
 #include <uk/arch/limits.h>
 
 struct plat_config _libplat_cfg = { 0 };
@@ -40,11 +34,10 @@ struct plat_config _libplat_cfg = { 0 };
 static char cmdline[MAX_CMDLINE_SIZE];
 static const char *appname = CONFIG_UK_NAME;
 
-smccc_conduit_fn_t smccc_psci_call;
+smcc_psci_callfn_t smcc_psci_call;
 
-#define _libplat_newstack(sp) ({				\
-	__asm__ __volatile__("mov sp, %0\n" ::"r" (sp));	\
-})
+extern void _libgem5plat_newstack(uint64_t stack_start,
+			void (*tramp)(void *), void *arg);
 
 static void _init_dtb(void *dtb_pointer)
 {
@@ -71,7 +64,6 @@ static void _dtb_get_psci_method(void)
 	if (fdtpsci < 0)
 		fdtpsci = fdt_node_offset_by_compatible(_libplat_cfg.dtb,
 							-1, "arm,psci-0.2");
-
 	if (fdtpsci < 0) {
 		uk_pr_info("No PSCI conduit found in DTB\n");
 		goto enomethod;
@@ -84,20 +76,21 @@ static void _dtb_get_psci_method(void)
 	}
 
 	if (!strcmp(fdtmethod, "hvc"))
-		smccc_psci_call = smccc_hvc;
+		smcc_psci_call = smcc_psci_hvc_call;
 	else if (!strcmp(fdtmethod, "smc"))
-		smccc_psci_call = smccc_smc;
+		smcc_psci_call = smcc_psci_smc_call;
 	else {
 		uk_pr_info("Invalid PSCI conduit method: %s\n",
 			   fdtmethod);
 		goto enomethod;
 	}
+
 	uk_pr_info("PSCI method: %s\n", fdtmethod);
 	return;
 
 enomethod:
 	uk_pr_info("Support PSCI from PSCI-0.2\n");
-	smccc_psci_call = NULL;
+	smcc_psci_call = NULL;
 }
 
 static void _init_dtb_mem(void)
@@ -147,8 +140,9 @@ static void _init_dtb_mem(void)
 
 	mem_base = fdt64_to_cpu(regs[0]);
 	mem_size = fdt64_to_cpu(regs[1]);
-	if (mem_base > __TEXT)
+	if (mem_base > __TEXT){
 		UK_CRASH("Fatal: Image outside of RAM\n");
+	}
 
 	max_addr = mem_base + mem_size;
 	_libplat_cfg.pagetable.start = ALIGN_DOWN((uintptr_t)__END,
@@ -163,8 +157,8 @@ static void _init_dtb_mem(void)
 						  __STACK_ALIGN_SIZE);
 	_libplat_cfg.bstack.len   = ALIGN_UP(__STACK_SIZE,
 						__STACK_ALIGN_SIZE);
-	_libplat_cfg.bstack.start = _liblat_cfg.bstack.end
-				       - _liblat_cfg.bstack.len;
+	_libplat_cfg.bstack.start = _libplat_cfg.bstack.end
+				       - _libplat_cfg.bstack.len;
 
 	_libplat_cfg.heap.start = _libplat_cfg.pagetable.end;
 	_libplat_cfg.heap.end   = _libplat_cfg.bstack.start;
@@ -205,15 +199,18 @@ enocmdl:
 	uk_pr_info("No command line found\n");
 }
 
-void __no_pauth _libplat_start(void *dtb_pointer)
+static void _libgem5plat_entry2(void *arg __attribute__((unused)))
 {
-	int ret;
+	ukplat_entry_argp(DECONST(char *, appname),
+			  (char *)cmdline, strlen(cmdline));
+}
 
+void _libgem5plat_start(void *dtb_pointer)
+{
 	_init_dtb(dtb_pointer);
+	_libplat_init_console();
 
-	pl011_console_init(dtb_pointer);
-
-	uk_pr_info("Entering from KVM (arm64)...\n");
+	uk_pr_info("Entering from GEM5 (arm64)...\n");
 
 	/* Get command line from DTB */
 	_dtb_get_cmdline(cmdline, sizeof(cmdline));
@@ -224,26 +221,8 @@ void __no_pauth _libplat_start(void *dtb_pointer)
 	/* Initialize memory from DTB */
 	_init_dtb_mem();
 
-#ifdef CONFIG_RTC_PL031
-	/* Initialize RTC */
-	pl031_init_rtc(dtb_pointer);
-#endif /* CONFIG_RTC_PL031 */
-
 	/* Initialize interrupt controller */
 	intctrl_init();
-
-	/* Initialize logical boot CPU */
-	ret = lcpu_init(lcpu_get_bsp());
-	if (unlikely(ret))
-		UK_CRASH("Failed to initialize bootstrapping CPU: %d\n", ret);
-
-#ifdef CONFIG_HAVE_SMP
-	ret = lcpu_mp_init(CONFIG_UKPLAT_LCPU_RUN_IRQ,
-			   CONFIG_UKPLAT_LCPU_WAKEUP_IRQ,
-			   _libkvmplat_cfg.dtb);
-	if (unlikely(ret))
-		UK_CRASH("SMP initialization failed: %d.\n", ret);
-#endif /* CONFIG_HAVE_SMP */
 
 	uk_pr_info("pagetable start: %p\n",
 		   (void *) _libplat_cfg.pagetable.start);
@@ -258,8 +237,6 @@ void __no_pauth _libplat_start(void *dtb_pointer)
 	uk_pr_info("Switch from bootstrap stack to stack @%p\n",
 		   (void *) _libplat_cfg.bstack.end);
 
-	_libplat_newstack(_libplat_cfg.bstack.end);
-
-	ukplat_entry_argp(DECONST(char *, appname),
-			  (char *)cmdline, strlen(cmdline));
+	_libgem5plat_newstack((uint64_t) _libplat_cfg.bstack.end,
+				_libgem5plat_entry2, NULL);
 }

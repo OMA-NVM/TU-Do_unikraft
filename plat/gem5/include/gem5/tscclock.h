@@ -1,11 +1,8 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 /*
- * Authors: Simon Kuenzer <simon.kuenzer@neclab.eu>
- *          Wei Chen <Wei.Chen@arm.com>
+ * Authors: Costin Lupu <costin.lupu@cs.pub.ro>
  *
- * Copyright (c) 2019, NEC Laboratories Europe GmbH, NEC Corporation,
- *                     All rights reserved.
- * Copyright (c) 2018, Arm Ltd., All rights reserved.
+ * Copyright (c) 2018, NEC Europe Ltd., NEC Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,34 +28,15 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * THIS HEADER MAY NOT BE EXTRACTED OR MODIFIED IN ANY WAY.
  */
 
-#ifndef __KVM_CONFIG_H__
-#define __KVM_CONFIG_H__
+#ifndef __KVM_TSCCLOCK_H__
+#define __KVM_TSCCLOCK_H__
 
-#include <inttypes.h>
-#include <sys/types.h>
+int tscclock_init(void);
+__u64 tscclock_monotonic(void);
+__u64 tscclock_epochoffset(void);
 
-struct kvmplat_config_memregion {
-	uintptr_t start;
-	uintptr_t end;
-	size_t len;
-};
-
-struct kvmplat_config {
-	struct kvmplat_config_memregion heap;
-	struct kvmplat_config_memregion bstack;
-	struct kvmplat_config_memregion initrd;
-	/* `heap2` potentially exists only if `heap` exists */
-	struct kvmplat_config_memregion heap2;
-
-#ifdef CONFIG_ARCH_ARM_64
-	struct kvmplat_config_memregion pagetable;
-	void *dtb;
-#endif
-};
-
-/* Initialized and defined in setup.c */
-extern struct kvmplat_config _libkvmplat_cfg;
-
-#endif /* __KVM_CONFIG_H__ */
+#endif /* __KVM_TSCCLOCK_H__ */

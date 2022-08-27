@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 /*
- * Authors: Costin Lupu <costin.lupu@cs.pub.ro>
+ * Authors: Wei Chen <wei.chen@arm.com>
  *
- * Copyright (c) 2018, NEC Europe Ltd., NEC Corporation. All rights reserved.
+ * Copyright (c) 2018, Arm Ltd., All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,38 +28,43 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * THIS HEADER MAY NOT BE EXTRACTED OR MODIFIED IN ANY WAY.
  */
-#ifndef __UKPLAT_IRQ_H__
-#define __UKPLAT_IRQ_H__
+#include <stdint.h>
+#include <uk/plat/lcpu.h>
+#include <arm/irq.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-struct uk_alloc;
-
-/**
- * Initializes platform IRQ subsystem
- * @param a The allocator to be used for internal memory allocations
- * @return initialization status
- */
-int ukplat_irq_init(struct uk_alloc *a);
-
-typedef int (*irq_handler_func_t)(void *);
-
-/**
- * Registers an interrupt handler
- * @param irq Interrupt number
- * @param func Interrupt funciton
- * @param arg Extra argument to be handover to interrupt function
- * @return 0 on success, a negative errno value on errors
- */
-int ukplat_irq_register(unsigned long irq, irq_handler_func_t func, void *arg);
-
-#ifdef __cplusplus
+void ukplat_lcpu_enable_irq(void)
+{
+	local_irq_enable();
 }
-#endif
 
-void _ukplat_irq_handle(unsigned long irq);
+void ukplat_lcpu_disable_irq(void)
+{
+	local_irq_disable();
+}
 
-#endif /* __UKPLAT_IRQ_H__ */
+unsigned long ukplat_lcpu_save_irqf(void)
+{
+	unsigned long flags;
+
+	local_irq_save(flags);
+
+	return flags;
+}
+
+void ukplat_lcpu_restore_irqf(unsigned long flags)
+{
+	local_irq_restore(flags);
+}
+
+int ukplat_lcpu_irqs_disabled(void)
+{
+	return irqs_disabled();
+}
+
+void ukplat_lcpu_irqs_handle_pending(void)
+{
+	// TODO
+}

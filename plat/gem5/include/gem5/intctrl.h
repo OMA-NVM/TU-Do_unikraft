@@ -28,38 +28,11 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * THIS HEADER MAY NOT BE EXTRACTED OR MODIFIED IN ANY WAY.
  */
-#ifndef __UKPLAT_IRQ_H__
-#define __UKPLAT_IRQ_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-struct uk_alloc;
-
-/**
- * Initializes platform IRQ subsystem
- * @param a The allocator to be used for internal memory allocations
- * @return initialization status
- */
-int ukplat_irq_init(struct uk_alloc *a);
-
-typedef int (*irq_handler_func_t)(void *);
-
-/**
- * Registers an interrupt handler
- * @param irq Interrupt number
- * @param func Interrupt funciton
- * @param arg Extra argument to be handover to interrupt function
- * @return 0 on success, a negative errno value on errors
- */
-int ukplat_irq_register(unsigned long irq, irq_handler_func_t func, void *arg);
-
-#ifdef __cplusplus
-}
-#endif
-
-void _ukplat_irq_handle(unsigned long irq);
-
-#endif /* __UKPLAT_IRQ_H__ */
+void intctrl_init(void);
+void intctrl_clear_irq(unsigned int irq);
+void intctrl_mask_irq(unsigned int irq);
+void intctrl_ack_irq(unsigned int irq);

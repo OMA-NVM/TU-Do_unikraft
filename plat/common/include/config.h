@@ -1,8 +1,11 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 /*
- * Authors: Costin Lupu <costin.lupu@cs.pub.ro>
+ * Authors: Simon Kuenzer <simon.kuenzer@neclab.eu>
+ *          Wei Chen <Wei.Chen@arm.com>
  *
- * Copyright (c) 2018, NEC Europe Ltd., NEC Corporation. All rights reserved.
+ * Copyright (c) 2019, NEC Laboratories Europe GmbH, NEC Corporation,
+ *                     All rights reserved.
+ * Copyright (c) 2018, Arm Ltd., All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,37 +32,33 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __UKPLAT_IRQ_H__
-#define __UKPLAT_IRQ_H__
 
-#ifdef __cplusplus
-extern "C" {
+#ifndef __PLAT_CONFIG_H__
+#define __PLAT_CONFIG_H__
+
+#include <inttypes.h>
+#include <sys/types.h>
+
+struct plat_config_memregion {
+	uintptr_t start;
+	uintptr_t end;
+	size_t len;
+};
+
+struct plat_config {
+	struct plat_config_memregion heap;
+	struct plat_config_memregion bstack;
+	struct plat_config_memregion initrd;
+	/* `heap2` potentially exists only if `heap` exists */
+	struct plat_config_memregion heap2;
+
+#ifdef CONFIG_ARCH_ARM_64
+	struct plat_config_memregion pagetable;
+	void *dtb;
 #endif
+};
 
-struct uk_alloc;
+/* Initialized and defined in setup.c */
+extern struct plat_config _libplat_cfg;
 
-/**
- * Initializes platform IRQ subsystem
- * @param a The allocator to be used for internal memory allocations
- * @return initialization status
- */
-int ukplat_irq_init(struct uk_alloc *a);
-
-typedef int (*irq_handler_func_t)(void *);
-
-/**
- * Registers an interrupt handler
- * @param irq Interrupt number
- * @param func Interrupt funciton
- * @param arg Extra argument to be handover to interrupt function
- * @return 0 on success, a negative errno value on errors
- */
-int ukplat_irq_register(unsigned long irq, irq_handler_func_t func, void *arg);
-
-#ifdef __cplusplus
-}
-#endif
-
-void _ukplat_irq_handle(unsigned long irq);
-
-#endif /* __UKPLAT_IRQ_H__ */
+#endif /* __PLAT_CONFIG_H__ */

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause */
 /*
- * Authors: Costin Lupu <costin.lupu@cs.pub.ro>
+ * Authors: Sharan Santhanam <sharan.santhanam@neclab.eu>
  *
  * Copyright (c) 2018, NEC Europe Ltd., NEC Corporation. All rights reserved.
  *
@@ -28,38 +28,18 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * THIS HEADER MAY NOT BE EXTRACTED OR MODIFIED IN ANY WAY.
  */
-#ifndef __UKPLAT_IRQ_H__
-#define __UKPLAT_IRQ_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-struct uk_alloc;
+#include <uk/plat/io.h>
 
 /**
- * Initializes platform IRQ subsystem
- * @param a The allocator to be used for internal memory allocations
- * @return initialization status
+ * TODO:
+ * For our kvm platform, the guest virtual address == guest physical address.
+ * We may have to reconsider this implementation when condition changes.
  */
-int ukplat_irq_init(struct uk_alloc *a);
-
-typedef int (*irq_handler_func_t)(void *);
-
-/**
- * Registers an interrupt handler
- * @param irq Interrupt number
- * @param func Interrupt funciton
- * @param arg Extra argument to be handover to interrupt function
- * @return 0 on success, a negative errno value on errors
- */
-int ukplat_irq_register(unsigned long irq, irq_handler_func_t func, void *arg);
-
-#ifdef __cplusplus
+__paddr_t ukplat_virt_to_phys(const volatile void *address)
+{
+	return (__paddr_t)address;
 }
-#endif
-
-void _ukplat_irq_handle(unsigned long irq);
-
-#endif /* __UKPLAT_IRQ_H__ */
