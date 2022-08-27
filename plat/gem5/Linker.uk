@@ -1,0 +1,62 @@
+ifeq (arm64,$(CONFIG_UK_ARCH))
+GEM5_LDFLAGS-y	 += -Wl,-m,aarch64elf -static -nostdlib -mstrict-align -nostartfiles -N
+endif
+
+
+##
+## Link image
+##
+GEM5_IMAGE := $(BUILD_DIR)/$(CONFIG_UK_NAME)_gem5-$(CONFIG_UK_ARCH)
+GEM5_DEBUG_IMAGE := $(GEM5_IMAGE).dbg
+
+GEM5_LD_SCRIPT_FLAGS := $(addprefix -Wl$(comma)-dT$(comma),\
+			 $(UK_PLAT_GEM5_DEF_LDS))
+GEM5_LD_SCRIPT_FLAGS += $(addprefix -Wl$(comma)-T$(comma),\
+			$(GEM5_LD_SCRIPT-y) $(EXTRA_LD_SCRIPT-y))
+
+$(GEM5_DEBUG_IMAGE): $(GEM5_ALIBS) $(GEM5_ALIBS-y) $(GEM5_OLIBS) $(GEM5_OLIBS-y) \
+		    $(UK_ALIBS) $(UK_ALIBS-y) $(UK_OLIBS) $(UK_OLIBS-y)
+	$(call build_cmd,LD,,$(GEM5_IMAGE).ld.o,\
+	       $(LD) -r $(LIBLDFLAGS) $(LIBLDFLAGS-y) \
+			$(GEM5_LDFLAGS) $(GEM5_LDFLAGS-y) \
+			$(GEM5_OLIBS) $(GEM5_OLIBS-y) \
+			$(UK_OLIBS) $(UK_OLIBS-y) \
+			-Wl$(comma)--start-group \
+			$(GEM5_ALIBS) $(GEM5_ALIBS-y) \
+			$(UK_ALIBS) $(UK_ALIBS-y) \
+			-Wl$(comma)--end-group \
+			-o $(GEM5_IMAGE).ld.o)
+	$(call build_cmd,OBJCOPY,,$(GEM5_IMAGE).o,\
+		$(OBJCOPY) -w -G gem5os_* -G _libgem5plat_entry \
+			$(GEM5_IMAGE).ld.o $(GEM5_IMAGE).o)
+	$(call build_cmd,LD,,$@,\
+	       $(LD) $(LDFLAGS) $(LDFLAGS-y) \
+		     $(GEM5_LDFLAGS) $(GEM5_LDFLAGS-y) \
+		     $(GEM5_LD_SCRIPT_FLAGS) \
+		     $(GEM5_IMAGE).o -o $@)
+
+$(GEM5_IMAGE): $(GEM5_IMAGE).dbg
+	$(call build_cmd,SCSTRIP,,$@,\
+		$(SCRIPTS_DIR)/sect-strip.py \
+			$(SECT_STRIP_FLAGS) $(SECT_STRIP_FLAGS-y) \
+			--with-objcopy=$(OBJCOPY) \
+			$< -o $@ && \
+		$(STRIP) -s $@)
+
+$(GEM5_IMAGE).sym: $(GEM5_DEBUG_IMAGE)
+	$(call build_cmd,NM,,$@, $(NM) -n $< > $@)
+
+$(GEM5_IMAGE).gz: $(GEM5_IMAGE)
+	$(call build_cmd,GZ,,$@, $(GZIP) -f -9 -c $< >$@)
+
+# register images to the build
+ifeq ($(CONFIG_PLAT_GEM5),y)
+UK_DEBUG_IMAGES-y                     += $(GEM5_DEBUG_IMAGE)
+UK_IMAGES-y                           += $(GEM5_IMAGE)
+UK_IMAGES-$(CONFIG_OPTIMIZE_SYMFILE)  += $(GEM5_IMAGE).sym
+UK_IMAGES-$(CONFIG_OPTIMIZE_COMPRESS) += $(GEM5_IMAGE).gz
+endif
+
+# ...for cleaning:
+LIBGEM5PLAT_CLEAN += $(call build_clean,$(GEM5_IMAGE).o)
+LIBGEM5PLAT_CLEAN += $(call build_clean,$(GEM5_IMAGE).ld.o)
