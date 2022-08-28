@@ -1,0 +1,5 @@
+config LIBPOSIX_PROCESS
+	bool "posix-process: Process-related functions"
+	default n
+	select LIBNOLIBC if !HAVE_LIBC
+	select LIBUKTIME

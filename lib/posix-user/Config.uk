@@ -1,0 +1,3 @@
+config LIBPOSIX_USER
+	bool "posix-user: User-related functions"
+	default n
