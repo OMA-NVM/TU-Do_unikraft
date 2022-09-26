@@ -12,7 +12,8 @@ ifneq ($(HAVE_STACKPROTECTOR),y)
 COMPFLAGS    += -fno-stack-protector
 endif
 COMPFLAGS    += -Wall -Wextra
-
+CFLAGS		 	+= -mno-outline-atomics -fno-builtin
+CXXFLAGS	 	+= -mno-outline-atomics -fno-builtin
 ASFLAGS      += -D__ASSEMBLY__
 
 ASINCLUDES   += -I$(CONFIG_UK_BASE)/include

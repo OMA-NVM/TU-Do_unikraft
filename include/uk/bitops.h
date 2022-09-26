@@ -281,7 +281,7 @@ __uk_test_and_clear_bit(long nr, volatile unsigned long *addr)
 	__u8 mask = 1 << (nr & 7);
 	__u8 orig;
 
-	//orig = __atomic_fetch_and(ptr, ~mask, __ATOMIC_RELAXED);
+	orig = __atomic_fetch_and(ptr, ~mask, __ATOMIC_RELAXED);
 
 	return (orig & mask) != 0;
 }
@@ -325,7 +325,7 @@ __uk_test_and_set_bit(long nr, volatile unsigned long *addr)
 	__u8 mask = 1 << (nr & 7);
 	__u8 orig;
 
-	//orig = __atomic_fetch_or(ptr, mask, __ATOMIC_RELAXED);
+	orig = __atomic_fetch_or(ptr, mask, __ATOMIC_RELAXED);
 
 	return (orig & mask) != 0; 
 }
